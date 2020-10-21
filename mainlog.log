@@ -1,0 +1,29 @@
+2020-10-21 11:29:38.287 root INFO: Parsing a crontab
+2020-10-21 11:29:38.289 root INFO: Forked
+2020-10-21 11:29:38.289 root INFO: Forked
+2020-10-21 11:29:38.289 root INFO: Forked
+2020-10-21 11:29:38.290 root INFO: Forked
+2020-10-21 11:29:38.291 root INFO: Forked
+2020-10-21 11:29:38.291 root INFO: Forked
+2020-10-21 11:29:38.292 root INFO: Forked
+2020-10-21 11:29:38.296 root INFO: Forked
+2020-10-21 11:29:38.297 root INFO: Forked
+2020-10-21 11:30:00.002 root INFO: Task: 1 completed PID: 9031
+2020-10-21 11:30:00.006 root INFO: Task: 6 completed PID: 9036
+2020-10-21 11:30:00.006 root INFO: Task: 3 completed PID: 9033
+2020-10-21 11:30:00.003 root INFO: Task: 4 completed PID: 9034
+2020-10-21 11:30:00.005 root INFO: Task: 7 completed PID: 9037
+2020-10-21 11:30:00.008 root INFO: Task: 0 completed PID: 9030
+2020-10-21 11:30:00.009 root INFO: Task: 8 completed PID: 9038
+2020-10-21 11:30:00.010 root INFO: Task: 5 completed PID: 9035
+2020-10-21 11:30:00.031 root INFO: Task: 2 completed PID: 9032
+2020-10-21 11:30:46.352 root WARNING: KeyboardInterrupt
+2020-10-21 11:30:46.352 root WARNING: KeyboardInterrupt
+2020-10-21 11:30:46.352 root WARNING: KeyboardInterrupt
+2020-10-21 11:30:46.352 root WARNING: KeyboardInterrupt
+2020-10-21 11:30:46.352 root WARNING: KeyboardInterrupt
+2020-10-21 11:30:46.352 root WARNING: KeyboardInterrupt
+2020-10-21 11:30:46.354 root WARNING: KeyboardInterrupt
+2020-10-21 11:30:46.354 root WARNING: KeyboardInterrupt
+2020-10-21 11:30:46.355 root WARNING: KeyboardInterrupt
+2020-10-21 11:30:46.355 root WARNING: KeyboardInterrupt
