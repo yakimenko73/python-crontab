@@ -1,10 +1,9 @@
 import os
-import signal
+import logging
 
 import time
 import pause
 
-import subprocess
 import psutil
 
 from crontab import CronTab
@@ -14,6 +13,10 @@ from datetime import datetime
 
 
 PATH_TO_CRONTAB = '/home/roman/Python-works/Simcord/Cron/mycron.tab'
+
+logging.basicConfig(filename='mainlog.log', filemode='a', level=logging.DEBUG,
+                    format='%(asctime)s.%(msecs)03d %(name)s %(levelname)s: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 
 def get_crontab(path):
@@ -28,17 +31,12 @@ def create_fork(crontab):
 
 		if pid == 0:
 			break
-
 	return pid, id_job
 
 
 def work(id_job, path, crontab):
 	flag = True
 	while flag:
-		time.sleep(2)
-
-		crontab = get_crontab(path)
-			
 		t = datetime.today()
 		base = datetime(t.year, 
 							t.month, 
@@ -51,22 +49,20 @@ def work(id_job, path, crontab):
 								base)
 		task = iter_.get_next(datetime)
 
-		print(str(task), datetime.now().strftime("%Y-%m-%d %H:%M:%S"), id_job)
-
 		pause.until(task)
 
 		status = os.system(str(crontab[id_job].command))
-		print(f'Task - {id_job}' + ' completed')
+		logging.info(f'Task: {id_job}' + ' completed' + f' PID: {os.getpid()}')
 
 
 def main(path):
 	crontab = get_crontab(path)
+	logging.info('Parsing a crontab')
 
 	pid, id_job = create_fork(crontab)
 
-	print(pid, os.getpid())
-
 	if pid == 0:
+		logging.info('Forked')
 		work(id_job, path, crontab)
 	else:
 		os.wait()
@@ -76,9 +72,10 @@ if __name__ == "__main__":
 	try:
 		main(PATH_TO_CRONTAB)
 	except KeyboardInterrupt:
-		print('Interrupt')
+		logging.warning('KeyboardInterrupt')
 		try:
 			proc = psutil.Process(os.getpid())
 			proc.kill()
 		except SystemExit:
+			logging.warning('SystemExit')
 			os._exit(0)
