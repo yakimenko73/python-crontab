@@ -13,10 +13,11 @@ from datetime import datetime
 
 
 PATH_TO_CRONTAB = '/home/roman/Python-works/Simcord/Cron/mycron.tab'
+PATH_TO_LOG = '/home/roman/Python-works/Simcord/Cron/mainlog.log'
 
-logging.basicConfig(filename='mainlog.log', filemode='a', level=logging.DEBUG,
-                    format='%(asctime)s.%(msecs)03d %(name)s %(levelname)s: %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(filename=PATH_TO_LOG, filemode='a', level=logging.DEBUG,
+					format='%(asctime)s.%(msecs)03d %(name)s %(levelname)s: %(message)s',
+					datefmt='%Y-%m-%d %H:%M:%S')
 
 
 def get_crontab(path):
@@ -45,8 +46,17 @@ def work(id_job, path, crontab):
 							t.minute, 
 							t.second)
 
-		iter_ = croniter(str(crontab[id_job].slices),
-								base)
+		try:
+			iter_ = croniter(str(crontab[id_job].slices),
+									base)
+		except Exception:
+			# на случай попадания @yearly, @reboot etc.
+			logging.warning('Specific job')
+			job = ''
+			for i in crontab[3]:
+				job += str(i) + ' '
+			iter_ = croniter(job, base)
+
 		task = iter_.get_next(datetime)
 
 		pause.until(task)
@@ -56,6 +66,7 @@ def work(id_job, path, crontab):
 
 
 def main(path):
+	logging.info('Programm start')
 	crontab = get_crontab(path)
 	logging.info('Parsing a crontab')
 
