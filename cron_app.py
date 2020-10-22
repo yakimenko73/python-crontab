@@ -1,5 +1,6 @@
 import os
 import logging
+import configparser
 
 import time
 import pause
@@ -11,13 +12,12 @@ from croniter import croniter
 
 from datetime import datetime
 
+config = configparser.ConfigParser()
+config.read("settings.ini")
 
-PATH_TO_CRONTAB = '/home/roman/Python-works/Simcord/Cron/mycron.tab'
-PATH_TO_LOG = '/home/roman/Python-works/Simcord/Cron/mainlog.log'
-
-logging.basicConfig(filename=PATH_TO_LOG, filemode='a', level=logging.DEBUG,
-					format='%(asctime)s.%(msecs)03d %(name)s %(levelname)s: %(message)s',
-					datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(filename = config["Path"]["PATH_TO_LOG"], filemode='a', level=logging.DEBUG,
+					format = '%(asctime)s.%(msecs)03d %(name)s %(levelname)s: %(message)s',
+					datefmt = '%Y-%m-%d %H:%M:%S')
 
 
 def get_crontab(path):
@@ -81,7 +81,7 @@ def main(path):
 
 if __name__ == "__main__":
 	try:
-		main(PATH_TO_CRONTAB)
+		main(config["Path"]["PATH_TO_CRONTAB"])
 	except KeyboardInterrupt:
 		logging.warning('KeyboardInterrupt')
 		try:
