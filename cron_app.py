@@ -47,8 +47,7 @@ def work(id_job, path, crontab):
 							t.second)
 
 		try:
-			iter_ = croniter(str(crontab[id_job].slices),
-									base)
+			iter_ = croniter(str(crontab[id_job].slices), base)
 		except Exception:
 			# на случай попадания @yearly, @reboot etc.
 			logging.warning('Specific job')
