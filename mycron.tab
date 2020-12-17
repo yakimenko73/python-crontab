@@ -1,9 +1,6 @@
-#testetstes
-gfdhjlgfh;gdk
-# авывпаарап
-# simcord
 # m h dom mon dow
-*/5 * * * * echo 'Command - 0, каждую минуту' >> /home/roman/myfile.txt
+*/5 * * * * echo 'Command - 0, каждые 5 минут' >> /home/roman/myfile.txt
 */2 * * * * echo 'Command - 1, каждые 2 минуты' >> /home/roman/myfile.txt
-* * * * * python3 '/home/roman/Python-works/Simcord/Cron/fdialog.py'
+*/3 * * * * python3 '/home/roman/Python-works/Simcord/Cron/fdialog.py'
 * * * * * echo 'Command - 3, каждую минуту' >> /home/roman/myfile.txt
+* * * * * python3 '/home/roman/Python-works/Simcord/Cron/cron_app.py'
