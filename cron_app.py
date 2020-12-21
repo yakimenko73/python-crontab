@@ -8,6 +8,7 @@ import time
 import pause
 
 import psutil
+import re
 
 from crontab import CronTab
 from croniter import croniter
@@ -15,20 +16,12 @@ from croniter import croniter
 from datetime import datetime
 
 
-config = configparser.ConfigParser()
-config.read("settings/settings.ini")
 
-pidfile = "temp/server.pid"
-
-logging.basicConfig(filename = config["Path"]["PATH_TO_LOG"], 
-					filemode='a', 
-					level=logging.DEBUG,
-					format = '%(asctime)s.%(msecs)03d %(name)s %(levelname)s: %(message)s',
-					datefmt = '%Y-%m-%d %H:%M:%S')
-
-
-def is_process_started(pid):
+def is_process_already_started(pid):
 	""" Проверка запущен ли этот скрипт """
+	if not pid: 
+		return False
+
 	try:
 		os.kill(pid, 0)
 		return True
@@ -36,29 +29,21 @@ def is_process_started(pid):
 		return False
 
 
-def check_pid():
-	""" Проверка является ли pid запущенного скрипта уже активным процессом """
+def get_pid_from_file(pidfile):
+	""" Чтения pid`а из файла """
+	pid = None
 	if os.path.isfile(pidfile):
 		logging.info("Is there a file with a pid? - True")
 		with open(pidfile, "r") as f:
-			# случай, если файл server.pid пустой
 			try:
 				pid = int(f.read())
 				logging.info("The file is not empty? - True")
 			except ValueError as ex:
 				logging.warning(f"Exception: {ex}")
-				return
+	else:
+		logging.info("Is there a file with a pid? - False")
 
-		if is_process_started(pid):
-			logging.info("Is the script already running? - True")
-			try:
-				proc = psutil.Process(os.getpid())
-				proc.kill()
-			except SystemExit:
-				logging.warning('SystemExit')
-				os._exit(0)
-
-		logging.info("Is the script already running? - False")
+	return pid
 
 
 def get_crontab(path):
@@ -105,39 +90,100 @@ def work(id_job, path, crontab):
 		logging.info(f'Task: {id_job}' + ' completed' + f' PID: {os.getpid()}')
 
 
-def main(path):
-	logging.info('Programm start')
+def workflow(path):
+	logging.info('Workflow start')
 	crontab = get_crontab(path)
-	logging.info('Parsing a crontab')
+	logging.info(f'Parsing a crontab. Length: {len(crontab)}')
+
+	fork_pid = 0
 
 	pid, id_job = create_fork(crontab)
 
-	if pid == 0:
+	if pid == fork_pid:
 		logging.info('Forked')
 		work(id_job, path, crontab)
 	else:
 		os.wait()
 
 
-if __name__ == "__main__":
-	check_pid()
+def init():
+	pidfile = "temp/server.pid"
 
-	# при каждом запуске скрипта будет записываться его pid,
-	# это нужно для того чтобы исключить возможность добавить
-	# этот же файл для исполнения в crontab
-	pid = str(os.getpid())
-	with open(pidfile, "w") as f:
-		f.write(pid)
+	true_log_levels = ['CRITICAL', 
+		'ERROR', 
+		'WARNING', 
+		'INFO', 
+		'DEBUG', 
+	]
+
+	true_file_modes = [
+		'r',
+		'w',
+		'x',
+		'a',
+		'b',
+		't',
+		'+',
+	]
+
+	return pidfile, true_log_levels, true_file_modes
+
+
+def setup():
+	global config
+	config = configparser.ConfigParser()
+	config.read("settings/settings.ini")
+
+	log_level = config["LoggingSettings"]["LEVEL"].upper()
+	file_mode = config["LoggingSettings"]["FILEMODE"].lower()
+	file_name = config["Path"]["PATH_TO_LOG"]
+
+	if not log_level in true_log_levels:
+		log_level = 'DEBUG'
+
+	if not file_mode in true_file_modes:
+		file_mode = 'a'
+
+	while True:
+		try:
+			logging.basicConfig(filename=file_name, 
+				filemode=file_mode, 
+				level=log_level,
+				format='%(asctime)s.%(msecs)03d %(name)s %(levelname)s: %(message)s',
+				datefmt='%Y-%m-%d %H:%M:%S')
+			break
+		except FileNotFoundError:
+			pathdir = re.findall("\w+/", file_name)
+			os.mkdir(''.join(pathdir))
+			continue
+
+	pid = get_pid_from_file(pidfile)
+
+	if is_process_already_started(pid):
+		logging.info("Is the script already running? - True")
+		os._exit(0)
+	else:
+		pid = os.getpid()
+
+	logging.info("Is the script already running? - False")
+
+	while True:
+		try:
+			with open(pidfile, "w") as f:
+				f.write(str(pid))
+			break
+		except FileNotFoundError:
+			pathdir = re.findall("\w+/", pidfile)
+			os.mkdir(''.join(pathdir))
+			continue
+
+
+if __name__ == "__main__":
+	pidfile, true_log_levels, true_file_modes = init()
+	setup()
 
 	try:
-		main(config["Path"]["PATH_TO_CRONTAB"])
+		workflow(config["Path"]["PATH_TO_CRONTAB"])
 	except KeyboardInterrupt:
 		logging.warning('KeyboardInterrupt' + f' PID: {os.getpid()}')
-		try:
-			proc = psutil.Process(os.getpid())
-			proc.kill()
-		except SystemExit:
-			logging.warning('SystemExit')
-			os._exit(0)
-	finally:
-		os.unlink(pidfile)
+		os._exit(0)
