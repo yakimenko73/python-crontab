@@ -146,15 +146,7 @@ def setup():
 
 	logging.info("Is the script already running? - False")
 
-	while True:
-		try:
-			with open(pidfile, "w") as f:
-				f.write(str(pid))
-			break
-		except FileNotFoundError:
-			pathdir = regex_filepath.findall(pidfile)
-			os.mkdir(''.join(pathdir))
-			continue
+	pidfile_setup(pid)
 
 
 def log_setup():
@@ -178,6 +170,18 @@ def log_setup():
 			break
 		except FileNotFoundError:
 			pathdir = regex_filepath.findall(file_name)
+			os.mkdir(''.join(pathdir))
+			continue
+
+
+def pidfile_setup(pid):
+	while True:
+		try:
+			with open(pidfile, "w") as f:
+				f.write(str(pid))
+			break
+		except FileNotFoundError:
+			pathdir = regex_filepath.findall(pidfile)
 			os.mkdir(''.join(pathdir))
 			continue
 
