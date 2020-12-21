@@ -134,6 +134,30 @@ def setup():
 	config = configparser.ConfigParser()
 	config.read("settings/settings.ini")
 
+	log_setup()
+
+	pid = get_pid_from_file(pidfile)
+
+	if is_process_already_started(pid):
+		logging.info("Is the script already running? - True")
+		os._exit(0)
+	else:
+		pid = os.getpid()
+
+	logging.info("Is the script already running? - False")
+
+	while True:
+		try:
+			with open(pidfile, "w") as f:
+				f.write(str(pid))
+			break
+		except FileNotFoundError:
+			pathdir = regex_filepath.findall(pidfile)
+			os.mkdir(''.join(pathdir))
+			continue
+
+
+def log_setup():
 	log_level = config["LoggingSettings"]["LEVEL"].upper()
 	file_mode = config["LoggingSettings"]["FILEMODE"].lower()
 	file_name = config["Path"]["PATH_TO_LOG"]
@@ -154,26 +178,6 @@ def setup():
 			break
 		except FileNotFoundError:
 			pathdir = regex_filepath.findall(file_name)
-			os.mkdir(''.join(pathdir))
-			continue
-
-	pid = get_pid_from_file(pidfile)
-
-	if is_process_already_started(pid):
-		logging.info("Is the script already running? - True")
-		os._exit(0)
-	else:
-		pid = os.getpid()
-
-	logging.info("Is the script already running? - False")
-
-	while True:
-		try:
-			with open(pidfile, "w") as f:
-				f.write(str(pid))
-			break
-		except FileNotFoundError:
-			pathdir = regex_filepath.findall(pidfile)
 			os.mkdir(''.join(pathdir))
 			continue
 
