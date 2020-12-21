@@ -18,7 +18,6 @@ from datetime import datetime
 
 
 def is_process_already_started(pid):
-	""" Проверка запущен ли этот скрипт """
 	if not pid: 
 		return False
 
@@ -30,7 +29,6 @@ def is_process_already_started(pid):
 
 
 def get_pid_from_file(pidfile):
-	""" Чтения pid`а из файла """
 	pid = None
 	if os.path.isfile(pidfile):
 		logging.info("Is there a file with a pid? - True")
