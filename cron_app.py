@@ -61,9 +61,8 @@ def create_fork(crontab):
 	return pid, id_job
 
 
-def work(id_job, path, crontab):
-	flag = True
-	while flag:
+def workflow(id_job, path, crontab):
+	while True:
 		t = datetime.today()
 		base = datetime(t.year, 
 							t.month, 
@@ -73,7 +72,7 @@ def work(id_job, path, crontab):
 							t.second)
 		try:
 			iter_ = croniter(str(crontab[id_job].slices), base)
-		except Exception:
+		except Exception as ex:
 			# на случай попадания @yearly, @reboot etc.
 			logging.warning('Specific job')
 			job = ''
@@ -90,24 +89,25 @@ def work(id_job, path, crontab):
 		logging.info(f'Task: {id_job}' + ' completed' + f' PID: {os.getpid()}')
 
 
-def workflow(path):
-	logging.info('Workflow start')
+def start(path):
+	logging.info('Beginning of work')
 	crontab = get_crontab(path)
 	logging.info(f'Parsing a crontab. Length: {len(crontab)}')
-
-	fork_pid = 0
 
 	pid, id_job = create_fork(crontab)
 
 	if pid == fork_pid:
-		logging.info('Forked')
-		work(id_job, path, crontab)
+		logging.info(f'Forked PID: {os.getpid()}')
+		workflow(id_job, path, crontab)
 	else:
 		os.wait()
 
 
 def init():
+	global regex_filepath, pidfile, fork_pid
+	regex_filepath = re.compile("\w+/")
 	pidfile = "temp/server.pid"
+	fork_pid = 0
 
 	true_log_levels = ['CRITICAL', 
 		'ERROR', 
@@ -126,7 +126,7 @@ def init():
 		'+',
 	]
 
-	return pidfile, true_log_levels, true_file_modes
+	return true_log_levels, true_file_modes
 
 
 def setup():
@@ -153,7 +153,7 @@ def setup():
 				datefmt='%Y-%m-%d %H:%M:%S')
 			break
 		except FileNotFoundError:
-			pathdir = re.findall("\w+/", file_name)
+			pathdir = regex_filepath.findall(file_name)
 			os.mkdir(''.join(pathdir))
 			continue
 
@@ -173,17 +173,17 @@ def setup():
 				f.write(str(pid))
 			break
 		except FileNotFoundError:
-			pathdir = re.findall("\w+/", pidfile)
+			pathdir = regex_filepath.findall(pidfile)
 			os.mkdir(''.join(pathdir))
 			continue
 
 
 if __name__ == "__main__":
-	pidfile, true_log_levels, true_file_modes = init()
+	true_log_levels, true_file_modes = init()
 	setup()
 
 	try:
-		workflow(config["Path"]["PATH_TO_CRONTAB"])
+		start(config["Path"]["PATH_TO_CRONTAB"])
 	except KeyboardInterrupt:
 		logging.warning('KeyboardInterrupt' + f' PID: {os.getpid()}')
 		os._exit(0)
