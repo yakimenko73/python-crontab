@@ -67,8 +67,8 @@ def get_current_date():
 	return date
 
 
-def create_fork(crontab):
-	for i in range(len(crontab)):
+def create_fork(crontab, count_jobs):
+	for i in range(count_jobs):
 		pid = os.fork()
 		id_job = i
 
@@ -77,11 +77,11 @@ def create_fork(crontab):
 	return pid, id_job
 
 
-def workflow(id_job, path, crontab):
+def workflow(id_job, crontab):
 	pid = os.getpid()
 	while True:
+		date = get_current_date()
 		try:
-			date = get_current_date()
 			iter_ = croniter(str(crontab[id_job].slices), date)
 		except Exception as ex:
 			# на случай попадания @yearly, @reboot и т.д.
@@ -106,11 +106,12 @@ def start(path):
 	crontab, count_jobs = get_crontab(path)
 	logging.info(f'Crontab read successfully. Count jobs: {count_jobs}')
 
-	pid, id_job = create_fork(crontab)
+	pid, id_job = create_fork(crontab, count_jobs)
+	print(pid)
 
 	if pid == fork_pid:
 		logging.info(f'Forked. PID: {os.getpid()}')
-		workflow(id_job, path, crontab)
+		workflow(id_job, crontab)
 	else:
 		os.wait()
 
