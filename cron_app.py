@@ -16,7 +16,6 @@ from croniter import croniter
 from datetime import datetime
 
 
-
 def is_process_already_started(pid):
 	if not pid: 
 		return False
@@ -46,7 +45,26 @@ def get_pid_from_file(pidfile):
 
 def get_crontab(path):
 	crontab = CronTab(tabfile=path)
-	return crontab
+	count_jobs = len(crontab)
+
+	if count_jobs:
+		return crontab, count_jobs
+
+	logging.warning("The crontab file has no jobs. Exiting the programm")
+	logging.info('Exit.' + f' PID: {os.getpid()}')
+
+	os._exit(0)
+
+
+def get_current_date():
+	t = datetime.today()
+	date = datetime(t.year, 
+		t.month, 
+		t.day, 
+		t.hour, 
+		t.minute, 
+		t.second)
+	return date
 
 
 def create_fork(crontab):
@@ -60,42 +78,38 @@ def create_fork(crontab):
 
 
 def workflow(id_job, path, crontab):
+	pid = os.getpid()
 	while True:
-		t = datetime.today()
-		base = datetime(t.year, 
-							t.month, 
-							t.day, 
-							t.hour, 
-							t.minute, 
-							t.second)
 		try:
-			iter_ = croniter(str(crontab[id_job].slices), base)
+			date = get_current_date()
+			iter_ = croniter(str(crontab[id_job].slices), date)
 		except Exception as ex:
-			# на случай попадания @yearly, @reboot etc.
-			logging.warning('Specific job')
-			job = ''
-			for i in crontab[3]:
-				job += str(i) + ' '
+			# на случай попадания @yearly, @reboot и т.д.
+			logging.info(f"Special job found. Task: {id_job} PID: {pid}")
+			job = ' '.join([str(i) for i in crontab[id_job]])
 
-			iter_ = croniter(job, base)
+			try:
+				iter_ = croniter(job, date)
+			except Exception as ex:
+				logging.error(f"Unexpected error while setting job runtime. Task: {id_job} PID: {pid}")
 
-		task_time = iter_.get_next(datetime)
+		next_runtime = iter_.get_next(datetime)
 
-		pause.until(task_time)
+		pause.until(next_runtime)
 
 		status = os.system(str(crontab[id_job].command))
-		logging.info(f'Task: {id_job}' + ' completed' + f' PID: {os.getpid()}')
+		logging.info(f'Task: {id_job}' + ' completed.' + f' PID: {pid}')
 
 
 def start(path):
-	logging.info('Beginning of work')
-	crontab = get_crontab(path)
-	logging.info(f'Parsing a crontab. Length: {len(crontab)}')
+	logging.info(f'Parsing a crontab')
+	crontab, count_jobs = get_crontab(path)
+	logging.info(f'Crontab read successfully. Count jobs: {count_jobs}')
 
 	pid, id_job = create_fork(crontab)
 
 	if pid == fork_pid:
-		logging.info(f'Forked PID: {os.getpid()}')
+		logging.info(f'Forked. PID: {os.getpid()}')
 		workflow(id_job, path, crontab)
 	else:
 		os.wait()
@@ -189,6 +203,7 @@ if __name__ == "__main__":
 	setup()
 
 	try:
+		logging.info('Beginning of work')
 		start(config["Path"]["PATH_TO_CRONTAB"])
 	except KeyboardInterrupt:
 		logging.warning('KeyboardInterrupt' + f' PID: {os.getpid()}')
