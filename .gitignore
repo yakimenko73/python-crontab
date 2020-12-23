@@ -1,3 +1,4 @@
 SharedCron/
 Cron/
+__pycache__/
 mainlog.log
