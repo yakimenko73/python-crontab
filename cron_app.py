@@ -16,10 +16,29 @@ from croniter import croniter
 from datetime import datetime
 
 
-def is_process_already_started(pid):
-	if not pid: 
-		return False
+PIDFILE = "temp/server.pid"
 
+FORK_PID = 0
+
+TRUE_LOG_LEVELS = ['CRITICAL', 
+	'ERROR', 
+	'WARNING', 
+	'INFO', 
+	'DEBUG', 
+]
+
+TRUE_FILE_MODES = [
+	'r',
+	'w',
+	'x',
+	'a',
+	'b',
+	't',
+	'+',
+]
+
+
+def is_process_already_started(pid: int):
 	try:
 		os.kill(pid, 0)
 		return True
@@ -27,33 +46,43 @@ def is_process_already_started(pid):
 		return False
 
 
-def get_pid_from_file(pidfile):
-	pid = None
-	if os.path.isfile(pidfile):
-		logging.info("Is there a file with a pid? - True")
-		with open(pidfile, "r") as f:
+def is_file(file):
+	return True if os.path.isfile(file) else False
+
+
+def get_pid_from_file():
+	if is_file(PIDFILE):
+		logging.info("Pid file exists")
+		with open(PIDFILE, "r") as f:
 			try:
+				logging.info("The file is not empty")
 				pid = int(f.read())
-				logging.info("The file is not empty? - True")
 			except ValueError as ex:
-				logging.warning(f"Exception: {ex}")
+				logging.warning("Invalid pid in file")
+				pid = None
 	else:
-		logging.info("Is there a file with a pid? - False")
+		logging.info("Pid file is not exists")
+		pid = None
 
 	return pid
 
 
 def get_crontab(path):
 	crontab = CronTab(tabfile=path)
+
+	return crontab
+
+
+def validation_crontab(crontab):
 	count_jobs = len(crontab)
+	if not count_jobs:
+		logging.warning("The crontab file has no jobs. Exiting the programm")
+		logging.info('Exit.' + f' PID: {os.getpid()}')
 
-	if count_jobs:
-		return crontab, count_jobs
+		os.unlink(PIDFILE)
+		os._exit(0)
 
-	logging.warning("The crontab file has no jobs. Exiting the programm")
-	logging.info('Exit.' + f' PID: {os.getpid()}')
-
-	os._exit(0)
+	return count_jobs
 
 
 def get_current_date():
@@ -79,133 +108,139 @@ def create_fork(crontab, count_jobs):
 
 def workflow(id_job, crontab):
 	pid = os.getpid()
+	logging.info(f'Forked. PID: {pid}')
+
 	while True:
 		date = get_current_date()
 		try:
-			iter_ = croniter(str(crontab[id_job].slices), date)
+			job_runtime = str(crontab[id_job].slices)
+			iter_ = croniter(job_runtime, date)
 		except Exception as ex:
-			# на случай попадания @yearly, @reboot и т.д.
+			# in case of hit @yearly, @reboot и т.д.
 			logging.info(f"Special job found. Task: {id_job} PID: {pid}")
-			job = ' '.join([str(i) for i in crontab[id_job]])
+			job_runtime = ' '.join([str(time_unit) for time_unit in crontab[id_job]]) # like this is expected: */2 * * * *
 
 			try:
-				iter_ = croniter(job, date)
+				iter_ = croniter(job_runtime, date)
 			except Exception as ex:
-				logging.error(f"Unexpected error while setting job runtime. Task: {id_job} PID: {pid}")
+				# if an exception was raised 
+				# what I did not expect
+				logging.error(f"Unexpected error while setting job runtime. Task: {id_job} PID: {pid} Error: {ex}")
 
-		next_runtime = iter_.get_next(datetime)
+		next_job_runtime = iter_.get_next(datetime)
 
-		pause.until(next_runtime)
+		pause.until(next_job_runtime)
 
 		status = os.system(str(crontab[id_job].command))
 		logging.info(f'Task: {id_job}' + ' completed.' + f' PID: {pid}')
 
 
-def start(path):
+def run(path):
 	logging.info(f'Parsing a crontab')
-	crontab, count_jobs = get_crontab(path)
+	crontab = get_crontab(path)
+	count_jobs = validation_crontab(crontab)
 	logging.info(f'Crontab read successfully. Count jobs: {count_jobs}')
 
 	pid, id_job = create_fork(crontab, count_jobs)
-	print(pid)
 
-	if pid == fork_pid:
-		logging.info(f'Forked. PID: {os.getpid()}')
+	if pid == FORK_PID:
 		workflow(id_job, crontab)
 	else:
 		os.wait()
 
 
 def init():
-	global regex_filepath, pidfile, fork_pid
+	global regex_filepath, path_to_crontab, path_to_log, log_filemode, log_level, config
+
 	regex_filepath = re.compile("\w+/")
-	pidfile = "temp/server.pid"
-	fork_pid = 0
 
-	true_log_levels = ['CRITICAL', 
-		'ERROR', 
-		'WARNING', 
-		'INFO', 
-		'DEBUG', 
-	]
+	config = None
 
-	true_file_modes = [
-		'r',
-		'w',
-		'x',
-		'a',
-		'b',
-		't',
-		'+',
-	]
+	path_to_crontab = None
+	path_to_log = None
 
-	return true_log_levels, true_file_modes
+	log_level = None
+	log_filemode = None
 
 
 def setup():
-	global config
-	config = configparser.ConfigParser()
-	config.read("settings/settings.ini")
+	config_setup()
+	logging_setup()
 
-	log_setup()
+	pid = get_pid_from_file()
 
-	pid = get_pid_from_file(pidfile)
+	if pid:
+		if is_process_already_started(pid):
+			logging.info("The script is already running. Exit")
+			os._exit(0)
 
-	if is_process_already_started(pid):
-		logging.info("Is the script already running? - True")
-		os._exit(0)
-	else:
-		pid = os.getpid()
+	logging.info("Invalid pid in file or file is missing. Continue to work")
 
-	logging.info("Is the script already running? - False")
-
+	pid = os.getpid()
+	
 	pidfile_setup(pid)
 
 
-def log_setup():
-	log_level = config["LoggingSettings"]["LEVEL"].upper()
-	file_mode = config["LoggingSettings"]["FILEMODE"].lower()
-	file_name = config["Path"]["PATH_TO_LOG"]
+def config_setup():
+	global path_to_crontab, path_to_log, log_filemode, log_level, config
 
-	if not log_level in true_log_levels:
+	config = configparser.ConfigParser()
+	config.read("settings/settings.ini")
+
+	try:
+		path_to_crontab = config["Path"]["PATH_TO_CRONTAB"]
+		path_to_log = config["Path"]["PATH_TO_LOG"]
+
+		log_level = config["LoggingSettings"]["LEVEL"].upper()
+		log_filemode = config["LoggingSettings"]["FILEMODE"].lower()
+	except KeyError as ex:
+		logging.error("Incorrect parameters in the configuration file")
+
+
+def logging_setup():
+	global regex_filepath, path_to_log, log_filemode, log_level
+
+	if not log_level in TRUE_LOG_LEVELS:
 		log_level = 'DEBUG'
 
-	if not file_mode in true_file_modes:
-		file_mode = 'a'
+	if not log_filemode in TRUE_FILE_MODES:
+		log_filemode = 'a'
 
-	while True:
-		try:
-			logging.basicConfig(filename=file_name, 
-				filemode=file_mode, 
-				level=log_level,
-				format='%(asctime)s.%(msecs)03d %(name)s %(levelname)s: %(message)s',
-				datefmt='%Y-%m-%d %H:%M:%S')
-			break
-		except FileNotFoundError:
-			pathdir = regex_filepath.findall(file_name)
-			os.mkdir(''.join(pathdir))
-			continue
+	pathdir = ''.join(regex_filepath.findall(path_to_log))
+	if pathdir:
+		if not os.path.exists(pathdir):
+			os.makedirs(pathdir)
+
+	logging.basicConfig(filename=path_to_log, 
+		level=log_level,
+		filemode=log_filemode, 
+		format='%(asctime)s.%(msecs)03d %(name)s %(levelname)s: %(message)s',
+		datefmt='%Y-%m-%d %H:%M:%S')
 
 
-def pidfile_setup(pid):
-	while True:
-		try:
-			with open(pidfile, "w") as f:
-				f.write(str(pid))
-			break
-		except FileNotFoundError:
-			pathdir = regex_filepath.findall(pidfile)
-			os.mkdir(''.join(pathdir))
-			continue
+def pidfile_setup(pid: int):
+	global regex_filepath
+
+	pathdir = ''.join(regex_filepath.findall(PIDFILE))
+	if pathdir:
+		if not os.path.exists(pathdir):
+			os.makedirs(pathdir)
+
+	with open(PIDFILE, "w") as f:
+		f.write(str(pid))
 
 
 if __name__ == "__main__":
-	true_log_levels, true_file_modes = init()
+	init()
 	setup()
 
 	try:
 		logging.info('Beginning of work')
-		start(config["Path"]["PATH_TO_CRONTAB"])
+		run(path_to_crontab)
 	except KeyboardInterrupt:
 		logging.warning('KeyboardInterrupt' + f' PID: {os.getpid()}')
+		try:
+			os.unlink(PIDFILE)
+		except FileNotFoundError:
+			pass
 		os._exit(0)

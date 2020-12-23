@@ -1,4 +1,5 @@
 # m h dom mon dow
-fds
-@reboot echo "lol"
-* * * * * echo "lol"
+fd
+* * * * * echo "lol1"
+* * * * * echo "lol2"
+@reboot echo "lol3"
