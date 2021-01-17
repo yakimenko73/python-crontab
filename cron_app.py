@@ -132,7 +132,7 @@ def workflow(id_job, crontab):
 		pause.until(next_job_runtime)
 
 		status = os.system(str(crontab[id_job].command))
-		logging.info(f'Task: {id_job}' + ' completed.' + f' PID: {pid}')
+		logging.info(f'Task: {id_job} - completed. PID: {pid}')
 
 
 def run(path):
