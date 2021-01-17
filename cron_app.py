@@ -116,7 +116,7 @@ def workflow(id_job, crontab):
 			job_runtime = str(crontab[id_job].slices)
 			iter_ = croniter(job_runtime, date)
 		except Exception as ex:
-			# in case of hit @yearly, @reboot и т.д.
+			# in case of hit @yearly, @reboot etc.
 			logging.info(f"Special job found. Task: {id_job} PID: {pid}")
 			job_runtime = ' '.join([str(time_unit) for time_unit in crontab[id_job]]) # like this is expected: */2 * * * *
 
