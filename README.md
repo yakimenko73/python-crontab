@@ -3,7 +3,6 @@
 [![Pray for Ukraine](https://img.shields.io/badge/made_in-ukraine-ffd700.svg?labelColor=0057b7)](https://stand-with-ukraine.pp.ua)
 [![Licence](https://img.shields.io/github/license/yakimenko73/python-crontab)](https://github.com/yakimenko73/python-crontab/blob/master/LICENSE)
 [![Code factor](https://www.codefactor.io/repository/github/yakimenko73/python-crontab/badge)](https://www.codefactor.io/repository/github/yakimenko73/python-crontab)
-[![Visitors count](https://shields-io-visitor-counter.herokuapp.com/badge?page=ESKYoung.shields-io-visitor-counter&color=1D70B8&logo=GitHub&logoColor=FFFFFF&style=flat-square)](https://github.com/yakimenko73/python-crontab)
 
 ## What is it?
 
