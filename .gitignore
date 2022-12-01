@@ -1,3 +1,3 @@
-SharedCron/
-Cron/
-mainlog.log
+logs/
+venv/
+.idea/

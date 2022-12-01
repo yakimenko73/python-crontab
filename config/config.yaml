@@ -1,0 +1,6 @@
+app:
+  crontab_path: ../input/cron.tab
+
+logger:
+  level: INFO
+  file_path: ../logs/logs_{time}.log

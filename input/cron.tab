@@ -1,0 +1,10 @@
+*/2 * * * * ../input/hello_world.sh
+* * * * * echo Minutely job!
+@reboot echo Job after reboot!
+@midnight echo Midnight job!
+@hourly echo Hourly job!
+@daily echo Daily job!
+@weekly echo Weekly job!
+@monthly echo Monthly job!
+@yearly echo Yearly job!
+@annually echo Annually job!
